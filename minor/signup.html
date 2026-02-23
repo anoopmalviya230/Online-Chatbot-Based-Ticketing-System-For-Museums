@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup Page</title>
+    <link rel="stylesheet" href="signup.css">
+</head>
+
+<body>
+    <a href="homepage.html" class="home-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        Home
+    </a>
+    <div class="login-container">
+        <!-- Step 1: Signup Form -->
+        <div class="login-form" id="signup-form">
+            <h2>Create your Account</h2>
+            <p class="subtitle">Fill out the form below to register.</p>
+
+            <form id="signupFormData">
+                <div class="input-group">
+                    <label for="full_name">Full Name</label><br>
+                    <input type="text" id="full_name" name="full_name" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="Email">Email</label><br>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="phone">Phone No.</label><br>
+                    <input type="tel" id="phone" name="phone" pattern="[0-9]{10}" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="password">Password</label><br>
+                    <input type="password" id="password" name="password" minlength="6" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="confirm-password">Confirm Password</label><br>
+                    <input type="password" id="confirm-password" name="confirm-password" required>
+                </div>
+
+                <button type="submit" class="login-btn" id="signup-btn">Sign Up</button>
+
+                <div class="signup-link">
+                    <p>Already have an account? <a href="login_page.html">Log In</a></p>
+                </div>
+
+                <div class="divider">
+                    <span class="divider-text">OR</span>
+                </div>
+
+                <!-- Google Login Button -->
+                <div id="g_id_onload"
+                    data-client_id="439305032170-kr2trnlop6plmr22s562h8k2c93hlt8g.apps.googleusercontent.com"
+                    data-context="signup" data-ux_mode="popup" data-callback="handleCredentialResponse"
+                    data-auto_prompt="false">
+                </div>
+                <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline"
+                    data-text="signup_with" data-size="large" data-logo_alignment="center" data-width="100%">
+                </div>
+            </form>
+        </div>
+
+        <!-- Step 2: OTP Verification -->
+        <div class="login-form otp-form-hidden" id="otp-form">
+            <h2>Verify Your Email</h2>
+            <p class="subtitle" id="otp-subtitle">Enter the 6-digit code sent to your email</p>
+
+            <div class="otp-container">
+                <div class="otp-input-group">
+                    <input type="text" class="otp-input" maxlength="1" id="otp1" data-index="0">
+                    <input type="text" class="otp-input" maxlength="1" id="otp2" data-index="1">
+                    <input type="text" class="otp-input" maxlength="1" id="otp3" data-index="2">
+                    <input type="text" class="otp-input" maxlength="1" id="otp4" data-index="3">
+                    <input type="text" class="otp-input" maxlength="1" id="otp5" data-index="4">
+                    <input type="text" class="otp-input" maxlength="1" id="otp6" data-index="5">
+                </div>
+
+                <div class="otp-timer" id="otp-timer">
+                    Time remaining: <span id="timer-display">10:00</span>
+                </div>
+
+                <div class="error-message hidden" id="otp-error"></div>
+                <div class="success-message hidden" id="otp-success"></div>
+            </div>
+
+            <button type="button" class="login-btn" id="verify-btn">Verify OTP</button>
+            <button type="button" class="resend-btn" id="resend-btn">Resend OTP</button>
+            <button type="button" class="back-btn" id="back-btn">← Back to Signup</button>
+        </div>
+    </div>
+
+    <!-- Google Login Script -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+        let userEmail = '';
+        let timerInterval = null;
+        let remainingSeconds = 600; // 10 minutes
+
+        // Google Login Handler
+        function handleCredentialResponse(response) {
+            fetch('backend/google_login.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential: response.credential })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = data.redirect;
+                    } else {
+                        alert("Sign up failed: " + data.error);
+                    }
+                })
+                .catch(err => console.error("Error:", err));
+        }
+
+        // Signup Form Submission
+        document.getElementById('signupFormData').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = {
+                full_name: document.getElementById('full_name').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                password: document.getElementById('password').value
+            };
+
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            // Validate passwords match
+            if (formData.password !== confirmPassword) {
+                alert('Passwords do not match!');
+                return;
+            }
+
+            // Disable button
+            const signupBtn = document.getElementById('signup-btn');
+            signupBtn.disabled = true;
+            signupBtn.textContent = 'Sending OTP...';
+
+            try {
+                const response = await fetch('backend/send_otp.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    userEmail = formData.email;
+
+                    // Show success message
+                    let message = data.message;
+                    if (data.testing_mode && data.otp) {
+                        message += '\n\nTESTING MODE - Your OTP is: ' + data.otp;
+                    }
+                    alert(message);
+
+                    // Switch to OTP form
+                    document.getElementById('signup-form').style.display = 'none';
+                    document.getElementById('otp-form').style.display = 'block';
+                    document.getElementById('otp-subtitle').textContent = `Enter the 6-digit code sent to ${userEmail}`;
+
+                    // Focus first OTP input
+                    document.getElementById('otp1').focus();
+
+                    // Start timer
+                    startTimer();
+                } else {
+                    alert(data.error || 'Failed to send OTP');
+                    signupBtn.disabled = false;
+                    signupBtn.textContent = 'Sign Up';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+                signupBtn.disabled = false;
+                signupBtn.textContent = 'Sign Up';
+            }
+        });
+
+        // OTP Input Handling
+        const otpInputs = document.querySelectorAll('.otp-input');
+        otpInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                const value = e.target.value;
+
+                // Only allow numbers
+                if (!/^\d$/.test(value)) {
+                    e.target.value = '';
+                    return;
+                }
+
+                // Move to next input
+                if (value && index < otpInputs.length - 1) {
+                    otpInputs[index + 1].focus();
+                }
+            });
+
+            input.addEventListener('keydown', (e) => {
+                // Handle backspace
+                if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                    otpInputs[index - 1].focus();
+                }
+            });
+
+            // Handle paste
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pastedData = e.clipboardData.getData('text').trim();
+
+                if (/^\d{6}$/.test(pastedData)) {
+                    pastedData.split('').forEach((char, i) => {
+                        if (otpInputs[i]) {
+                            otpInputs[i].value = char;
+                        }
+                    });
+                    otpInputs[5].focus();
+                }
+            });
+        });
+
+        // Verify OTP
+        document.getElementById('verify-btn').addEventListener('click', async () => {
+            const otp = Array.from(otpInputs).map(input => input.value).join('');
+
+            if (otp.length !== 6) {
+                showError('Please enter all 6 digits');
+                return;
+            }
+
+            const verifyBtn = document.getElementById('verify-btn');
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = 'Verifying...';
+
+            try {
+                const response = await fetch('backend/verify_otp.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: userEmail, otp })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showSuccess(data.message);
+                    clearInterval(timerInterval);
+
+                    // Redirect after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = data.redirect;
+                    }, 2000);
+                } else {
+                    showError(data.error);
+                    verifyBtn.disabled = false;
+                    verifyBtn.textContent = 'Verify OTP';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Verification failed. Please try again.');
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = 'Verify OTP';
+            }
+        });
+
+        // Resend OTP
+        document.getElementById('resend-btn').addEventListener('click', async () => {
+            const resendBtn = document.getElementById('resend-btn');
+            resendBtn.disabled = true;
+            resendBtn.textContent = 'Resending...';
+
+            // Get original form data from hidden storage or prompt user
+            const full_name = document.getElementById('full_name').value;
+            const phone = document.getElementById('phone').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('backend/send_otp.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        full_name,
+                        email: userEmail,
+                        phone,
+                        password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    let message = 'New OTP sent to your email!';
+                    if (data.testing_mode && data.otp) {
+                        message += '\n\nTESTING MODE - Your OTP is: ' + data.otp;
+                    }
+                    alert(message);
+
+                    // Reset timer
+                    clearInterval(timerInterval);
+                    remainingSeconds = 600;
+                    startTimer();
+
+                    // Clear OTP inputs
+                    otpInputs.forEach(input => input.value = '');
+                    otpInputs[0].focus();
+                } else {
+                    alert(data.error || 'Failed to resend OTP');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to resend OTP');
+            } finally {
+                resendBtn.disabled = false;
+                resendBtn.textContent = 'Resend OTP';
+            }
+        });
+
+        // Back Button
+        document.getElementById('back-btn').addEventListener('click', () => {
+            clearInterval(timerInterval);
+            document.getElementById('otp-form').style.display = 'none';
+            document.getElementById('signup-form').style.display = 'block';
+            document.getElementById('signup-btn').disabled = false;
+            document.getElementById('signup-btn').textContent = 'Sign Up';
+            otpInputs.forEach(input => input.value = '');
+        });
+
+        // Timer Function
+        function startTimer() {
+            remainingSeconds = 600;
+            updateTimerDisplay();
+
+            timerInterval = setInterval(() => {
+                remainingSeconds--;
+                updateTimerDisplay();
+
+                if (remainingSeconds <= 0) {
+                    clearInterval(timerInterval);
+                    showError('OTP has expired. Please request a new one.');
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+            document.getElementById('timer-display').textContent =
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('otp-error');
+            const successEl = document.getElementById('otp-success');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            successEl.style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            const errorEl = document.getElementById('otp-error');
+            const successEl = document.getElementById('otp-success');
+            successEl.textContent = message;
+            successEl.style.display = 'block';
+            errorEl.style.display = 'none';
+        }
+    </script>
+</body>
+
+</html>

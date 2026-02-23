@@ -1,0 +1,48 @@
+/* Loader container - works for both #page-loader and #loader */
+#page-loader .container,
+#loader .container {
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Ensure loader overlays are properly positioned and centered */
+#page-loader,
+#loader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Spinning loader circle */
+.loader {
+    border: solid 4px #1b75be;
+    border-top: solid 4px rgba(197, 240, 8, 0.5);
+    background-color: white;
+    height: 80px;
+    width: 80px;
+    border-radius: 50%;
+    animation: spinAnimate 1.2s linear infinite;
+}
+
+/* Text below the loader */
+.text {
+    margin-top: 20px;
+    font-size: 18px;
+    font-weight: 500;
+    color: #1b75be;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Spin animation */
+@keyframes spinAnimate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
